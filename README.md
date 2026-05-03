@@ -27,11 +27,17 @@ CosyVoice Docker 高性能部署指南
 建议按照以下结构存放文件：
 
 Plaintext
+
 CosyVoice-Docker/
+
 ├── Dockerfile              # 镜像构建文件
+
 ├── docker-compose.yml      # 容器编排文件
+
 ├── pretrained_models/      # (自动生成) 模型存放目录
+
 └── output/                 # (自动生成) 音频输出目录
+
 📦 部署步骤
 
 1. 构建镜像
