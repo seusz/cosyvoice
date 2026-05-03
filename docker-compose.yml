@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  cosyvoice:
+    # 1. 镜像名称：替换为你刚才使用 docker build -t 后边指定的名字
+    image: cosyvoice:latest 
+    container_name: cosyvoice_node
+    restart: unless-stopped
+    
+    # 2. 共享内存：运行 PyTorch 等大模型框架必备，防止 DataLoader 内存溢出
+    ipc: host 
+    
+    # 3. 端口映射：假设你要运行 WebUI，通常需要暴露端口（根据实际启动脚本调整）
+    ports:
+      - "50000:50000" 
+      - "8300:8000" # 如果是 FastAPI 服务，可能是这个端口
+      
+    environment:
+      - GRADIO_SERVER_NAME=0.0.0.0
+
+    # 4. 目录挂载：非常重要！把宿主机的目录映射进去，防止模型和生成的音频丢失
+    volumes:
+      - ./pretrained_models:/workspace/CosyVoice/pretrained_models # 预训练模型目录
+      - ./output:/workspace/CosyVoice/output                       # 生成的音频输出目录
+      # 如果有从 ModelScope 或 HuggingFace 自动下载的模型，建议把缓存也挂载出来
+      - ~/.cache/modelscope:/root/.cache/modelscope
+      - ~/.cache/huggingface:/root/.cache/huggingface
+
+    # 5. 显卡直通：让容器能够调用底层的 NVIDIA 显卡
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              # 如果想让容器使用所有显卡，用 count: all
+              count: all 
+              # 如果你的环境里有多张不同型号的显卡（比如 P104-100 和 P106-100 混插），
+              # 想指定只把某几张特定的卡分配给这个容器，可以注释掉 count，改用 device_ids：
+              # device_ids: ['0'] 
+              capabilities: [gpu]
+
+    # 6. 启动命令：这里直接使用我们之前配置好的绝对路径，最稳妥
+    # 方案 A：直接启动 Web UI 服务（注意把 --port 和 --host 替换为实际参数）
+    command: >
+      /bin/bash -c "/opt/conda/envs/cosyvoice/bin/python webui.py --port 50000 --model_dir iic/CosyVoice2-0.5B"
+    
+    # 方案 B：如果你暂时不知道怎么启动，想先进入容器内部慢慢调试，请注释掉上面的 command，解开下面这行：
+    # command: tail -f /dev/null
